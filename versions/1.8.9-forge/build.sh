@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Noob_launchar 1.8.9 (Forge) — manual build pipeline.
+# Noob_mod_antor 1.8.9 (Forge) — manual build pipeline.
+# (The project was called Noob_launchar up to version 1.0.0.)
 #
 # Why manual: the stock ForgeGradle 2.1 route cannot run in this sandbox
 # (all Java TCP is blocked by the sandbox's other_tcp=Deny permission, so
@@ -84,7 +85,7 @@ cp -r src/main/resources/. classes/
 python3 "$M/merge_jars.py" "$M/work/context.jar" "$M/libs/minecraft-1.8.9-forge-mcp.jar" "$M/work/mod-mcp.jar" | tail -1
 "$JDK/bin/java" -jar "$M/tools/SpecialSource.jar" --in-jar "$M/work/context.jar" --out-jar "$M/work/context-srg.jar" --srg-in "$M/mappings/mcp2srg.srg" | tail -1
 rm -rf "$M/work/final" && mkdir -p "$M/work/final"
-(cd "$M/work/final" && unzip -qo ../context-srg.jar 'nooblaunchar/*' mcmod.info)
-"$JDK/bin/jar" cf Noob_launchar-1.0.0.jar -C "$M/work/final" .
+(cd "$M/work/final" && unzip -qo ../context-srg.jar 'noobmodantor/*' 'assets/noob_mod_antor/*' mcmod.info)
+"$JDK/bin/jar" cf Noob_mod_antor-1.1.0.jar -C "$M/work/final" .
 
-echo "Built: $(pwd)/Noob_launchar-1.0.0.jar ($(stat -c%s Noob_launchar-1.0.0.jar) bytes)"
+echo "Built: $(pwd)/Noob_mod_antor-1.1.0.jar ($(stat -c%s Noob_mod_antor-1.1.0.jar) bytes)"

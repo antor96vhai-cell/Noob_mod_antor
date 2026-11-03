@@ -1,4 +1,6 @@
-# Noob_launchar — menu & HUD design notes
+# Noob_mod_antor — menu & HUD design notes
+
+> Renamed from **Noob_launchar** to **Noob_mod_antor** on 2026-11-03.
 
 Original design (no third-party client assets, branding or layouts are
 copied — only the generic feature ideas: module list, toggles, HUD editor).
@@ -22,7 +24,7 @@ copied — only the generic feature ideas: module list, toggles, HUD editor).
 ## Layout
 
 - **Main menu:** centered panel, 320px wide, 16px from top/bottom of the
-  screen. Header: accent title "Noob_launchar", dim subtitle, 1px accent
+  screen. Header: accent title "Noob_mod_antor", dim subtitle, 1px accent
   rule. Module rows 24px high: name left, ">" settings affordance, ON/OFF
   pill (30×14, right). List scrolls (mouse wheel) inside a scissored/clipped
   region. Footer: "Edit HUD" and "Done" buttons (120×22).
