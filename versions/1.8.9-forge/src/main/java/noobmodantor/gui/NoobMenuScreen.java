@@ -19,11 +19,25 @@ public class NoobMenuScreen extends GuiScreen {
     private static final int ROW_H = 24;
     private static final int HEADER_H = 68;
     private static final int FOOTER_H = 34;
+    private static final int BAR_W = 4;
 
     private final List<Ui.Zone> zones = new ArrayList<Ui.Zone>();
     private int scroll = 0;
     /** Live name filter for the module list (SmartSearch-lite). */
     private String search = "";
+
+    // Scrollbar state. Geometry is refreshed by drawScrollbar() every frame
+    // and read back by the mouse handlers, so the wheel, drags and track
+    // clicks all act on exactly what is on screen.
+    private boolean draggingBar = false;
+    private int dragGrabOffset = 0;
+    private boolean barVisible = false;
+    private int barX = 0;
+    private int barTop = 0;
+    private int barBottom = 0;
+    private int barThumbY = 0;
+    private int barThumbH = 0;
+    private int barMaxScroll = 0;
 
     private int panelX() {
         return (this.width - PANEL_W) / 2;
@@ -73,16 +87,19 @@ public class NoobMenuScreen extends GuiScreen {
 
         int listTop = listTop();
         int listBottom = listBottom();
-        List<Module> modules = new ArrayList<Module>();
-        String needle = search.trim().toLowerCase();
-        for (Module m : Modules.all()) {
-            if (needle.isEmpty() || m.name.toLowerCase().contains(needle)) {
-                modules.add(m);
-            }
-        }
+        List<Module> modules = filteredModules();
         int contentH = modules.size() * ROW_H;
         int maxScroll = Math.max(0, contentH - (listBottom - listTop));
         scroll = Math.max(0, Math.min(scroll, maxScroll));
+
+        // Clip the rows to the list area, so a fractional scroll offset
+        // (from dragging the scrollbar thumb) can never paint a partial
+        // row over the header or footer.
+        net.minecraft.client.gui.ScaledResolution sr = new net.minecraft.client.gui.ScaledResolution(this.mc);
+        int sf = sr.getScaleFactor();
+        org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_SCISSOR_TEST);
+        org.lwjgl.opengl.GL11.glScissor(px * sf, (this.height - listBottom) * sf,
+                PANEL_W * sf, (listBottom - listTop) * sf);
         if (modules.isEmpty()) {
             Ui.centeredText(this.fontRendererObj, "No modules match \"" + search + "\"",
                     px + PANEL_W / 2, listTop + 12, Ui.TEXT_DIM);
@@ -117,6 +134,10 @@ public class NoobMenuScreen extends GuiScreen {
                 }));
             }
         }
+
+        org.lwjgl.opengl.GL11.glDisable(org.lwjgl.opengl.GL11.GL_SCISSOR_TEST);
+
+        drawScrollbar(px, listTop, listBottom, contentH, maxScroll);
 
         int btnY = py + ph - FOOTER_H + 6;
         final int btnW = 74;
@@ -160,10 +181,89 @@ public class NoobMenuScreen extends GuiScreen {
 
     @Override
     protected void mouseClicked(int mouseX, int mouseY, int mouseButton) {
+        // Scrollbar first: grab the thumb to drag, or click the track
+        // above/below it to page. The hit area is padded 2 px on each
+        // side of the 4 px bar so it is easy to grab.
+        if (mouseButton == 0 && barVisible
+                && mouseX >= barX - 2 && mouseX < barX + BAR_W + 2
+                && mouseY >= barTop && mouseY < barBottom) {
+            if (mouseY >= barThumbY && mouseY < barThumbY + barThumbH) {
+                draggingBar = true;
+                dragGrabOffset = mouseY - barThumbY;
+            } else {
+                int page = (barBottom - barTop) - ROW_H;
+                scroll += mouseY < barThumbY ? -page : page;
+                clampScroll();
+            }
+            return;
+        }
         if (mouseButton == 0 && Ui.click(zones, mouseX, mouseY)) {
             return;
         }
         super.mouseClicked(mouseX, mouseY, mouseButton);
+    }
+
+    @Override
+    protected void mouseClickMove(int mouseX, int mouseY, int clickedMouseButton, long timeSinceLastClick) {
+        if (draggingBar) {
+            int travel = (barBottom - barTop) - barThumbH;
+            if (travel > 0 && barMaxScroll > 0) {
+                double frac = (double) (mouseY - dragGrabOffset - barTop) / (double) travel;
+                if (frac < 0) frac = 0;
+                if (frac > 1) frac = 1;
+                scroll = (int) Math.round(frac * barMaxScroll);
+            }
+            return;
+        }
+        super.mouseClickMove(mouseX, mouseY, clickedMouseButton, timeSinceLastClick);
+    }
+
+    @Override
+    protected void mouseReleased(int mouseX, int mouseY, int state) {
+        draggingBar = false;
+        super.mouseReleased(mouseX, mouseY, state);
+    }
+
+    /** Modules passing the current search filter, in menu order. */
+    private List<Module> filteredModules() {
+        List<Module> modules = new ArrayList<Module>();
+        String needle = search.trim().toLowerCase();
+        for (Module m : Modules.all()) {
+            if (needle.isEmpty() || m.name.toLowerCase().contains(needle)) {
+                modules.add(m);
+            }
+        }
+        return modules;
+    }
+
+    private void clampScroll() {
+        int maxScroll = Math.max(0, filteredModules().size() * ROW_H - (listBottom() - listTop()));
+        scroll = Math.max(0, Math.min(scroll, maxScroll));
+    }
+
+    /**
+     * Slim scrollbar inside the panel's right edge, drawn only when the
+     * list overflows: a subtle dark track plus a thumb in the menu accent
+     * color. Thumb height is the visible fraction of the content and its
+     * position tracks {@link #scroll}; the geometry is stored so the
+     * mouse handlers can implement dragging and track paging.
+     */
+    private void drawScrollbar(int px, int listTop, int listBottom, int contentH, int maxScroll) {
+        if (maxScroll <= 0) {
+            barVisible = false;
+            return;
+        }
+        int trackH = listBottom - listTop;
+        barX = px + PANEL_W - BAR_W - 4;
+        barTop = listTop;
+        barBottom = listBottom;
+        barMaxScroll = maxScroll;
+        Ui.fill(barX, barTop, BAR_W, trackH, Ui.CHIP_BG);
+        barThumbH = Math.max(16, trackH * trackH / contentH);
+        if (barThumbH > trackH) barThumbH = trackH;
+        barThumbY = barTop + (trackH - barThumbH) * scroll / maxScroll;
+        Ui.fill(barX, barThumbY, BAR_W, barThumbH, Ui.accent());
+        barVisible = true;
     }
 
     @Override

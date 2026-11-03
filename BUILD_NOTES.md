@@ -23,8 +23,9 @@ noob-launchar/
     CONFIG_SCHEMA.md        config JSON schema shared by all versions
   versions/
     1.8.9-forge/            Minecraft 1.8.9 + Forge 11.15.1.2318, Java 8, MCP mappings
-      Noob_mod_antor-1.1.0.jar    <- current distribution jar (SRG names)
-      Noob_launchar-1.0.0.jar     <- previous release, kept in place
+      Noob_mod_antor-1.1.1.jar    <- current distribution jar (SRG names)
+      Noob_mod_antor-1.1.0.jar    <- previous release, kept in place
+      Noob_launchar-1.0.0.jar     <- first release, kept in place
       build.sh                    reproducible manual pipeline (see below)
       generate_pack.py            generates the built-in FPS pack textures
       build.gradle, gradlew, ...  official MDK files (see "ForgeGradle" below)
@@ -45,12 +46,49 @@ Toolchain installed in the workspace: Temurin JDK 8 at `~/workspace/jdk8`
 
 | Version | Status | Jar | Size |
 |---------|--------|-----|------|
-| **1.8.9 Forge** | ✅ **Built** (manual pipeline; compiles clean, reobf verified) — **1.1.0**, renamed Noob_mod_antor, 38 modules + Performance page + Appearance page + built-in FPS pack | `versions/1.8.9-forge/Noob_mod_antor-1.1.0.jar` | 154,593 bytes |
-| 1.8.9 Forge (previous) | ✅ Built (as Noob_launchar, 11 modules) | `versions/1.8.9-forge/Noob_launchar-1.0.0.jar` | 47,942 bytes |
+| **1.8.9 Forge** | ✅ **Built** (manual pipeline; compiles clean, reobf verified) — **1.1.1**, menu scrollbar fix on top of 1.1.0 (renamed Noob_mod_antor, 38 modules + Performance page + Appearance page + built-in FPS pack) | `versions/1.8.9-forge/Noob_mod_antor-1.1.1.jar` | 155,666 bytes |
+| 1.8.9 Forge (previous) | ✅ Built — 1.1.0, 38 modules + Performance page + Appearance page + built-in FPS pack | `versions/1.8.9-forge/Noob_mod_antor-1.1.0.jar` | 154,593 bytes |
+| 1.8.9 Forge (first) | ✅ Built (as Noob_launchar, 11 modules) | `versions/1.8.9-forge/Noob_launchar-1.0.0.jar` | 47,942 bytes |
 | **26.2 Fabric** | ✅ Built earlier; display name renamed to Noob_launchar and rebuilt this run | `versions/26.2-fabric/Noob_launchar-1.0.0_mc26.2.jar` | 45,243 bytes |
 
 Adding a future version = create `versions/<mc>-<loader>/`, reuse the
 `shared/` spec, mirror the module classes, add a `build.sh`.
+
+---
+
+## 1.1.1 fix — menu scrollbar (2026-11-03)
+
+User report: the Right Shift menu's module list scrolled by mouse wheel
+but showed no scrollbar, so there was no visual sign of how far the list
+goes. Fixed in `gui/NoobMenuScreen.java` (1.8.9 build only; version
+bumped to 1.1.1 in `NoobModAntor.VERSION`, `mcmod.info` and the
+`build.sh` jar name; the 1.1.0 jar is kept in place untouched):
+
+- A slim (4 px) scrollbar now sits inside the panel's right edge,
+  spanning the list area, and is drawn only when the list actually
+  overflows: a subtle dark track (`Ui.CHIP_BG`) plus a thumb in the
+  live menu accent color (`Ui.accent()`). Thumb height is the visible
+  fraction of the content (min 16 px) and its position tracks the
+  scroll offset, so wheel scrolling moves the thumb as before.
+- The thumb is draggable (`mouseClicked` grabs it — hit area padded
+  2 px each side — `mouseClickMove` maps the drag position back to a
+  scroll offset, `mouseReleased` ends the drag), and clicking the
+  track above/below the thumb pages up/down by one list height minus
+  a row. Bar geometry is stored each frame by the draw pass and read
+  back by the input handlers, so they always act on what is on screen.
+- Rows are now clipped to the list area with an OpenGL scissor while
+  drawing, so a fractional scroll offset from dragging can no longer
+  paint a partial row over the header or footer. Search box, layout
+  and all other behavior unchanged; still 38 modules.
+
+Verified: clean `build.sh` run (zero compile errors),
+`Noob_mod_antor-1.1.1.jar` = 155,666 bytes, bundled `mcmod.info`
+reports version 1.1.1, and javap on the reobfuscated jar confirms the
+new handlers survived as the correct SRG names (`func_73864_a`
+mouseClicked, `func_146286_b` mouseReleased, `func_146273_a`
+mouseClickMove) alongside the new `drawScrollbar`/`clampScroll`
+helpers. Live-test: open the menu, the bar is visible at the right;
+wheel, thumb-drag and track clicks all move the list.
 
 ---
 
