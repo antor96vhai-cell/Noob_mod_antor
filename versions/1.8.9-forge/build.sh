@@ -86,6 +86,6 @@ python3 "$M/merge_jars.py" "$M/work/context.jar" "$M/libs/minecraft-1.8.9-forge-
 "$JDK/bin/java" -jar "$M/tools/SpecialSource.jar" --in-jar "$M/work/context.jar" --out-jar "$M/work/context-srg.jar" --srg-in "$M/mappings/mcp2srg.srg" | tail -1
 rm -rf "$M/work/final" && mkdir -p "$M/work/final"
 (cd "$M/work/final" && unzip -qo ../context-srg.jar 'noobmodantor/*' 'assets/noob_mod_antor/*' mcmod.info)
-"$JDK/bin/jar" cf Noob_mod_antor-1.1.2.jar -C "$M/work/final" .
+"$JDK/bin/jar" cf Noob_mod_antor-1.2.0.jar -C "$M/work/final" .
 
-echo "Built: $(pwd)/Noob_mod_antor-1.1.2.jar ($(stat -c%s Noob_mod_antor-1.1.2.jar) bytes)"
+echo "Built: $(pwd)/Noob_mod_antor-1.2.0.jar ($(stat -c%s Noob_mod_antor-1.2.0.jar) bytes)"

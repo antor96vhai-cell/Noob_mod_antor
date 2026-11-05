@@ -1,9 +1,11 @@
 package noobmodantor.hud;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiMainMenu;
 import net.minecraftforge.client.event.ClientChatReceivedEvent;
 import net.minecraftforge.client.event.EntityViewRenderEvent;
 import net.minecraftforge.client.event.FOVUpdateEvent;
+import net.minecraftforge.client.event.GuiOpenEvent;
 import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderHandEvent;
@@ -16,6 +18,7 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import noobmodantor.NoobConfig;
 import noobmodantor.NoobModAntor;
+import noobmodantor.gui.NoobMainMenu;
 import noobmodantor.gui.NoobMenuScreen;
 import noobmodantor.module.AnimationModule;
 import noobmodantor.module.BehindYouModule;
@@ -163,6 +166,25 @@ public class ClientEvents {
             final int[] pos = module.pos(mc);
             guard(module.id, () -> module.render(mc, pos[0], pos[1]));
         }
+    }
+
+    // ---------------------------------------------------------------
+    // Branded main menu (home page replacement)
+    // ---------------------------------------------------------------
+
+    /**
+     * Swaps the vanilla main menu for the branded NoobMainMenu. The
+     * exact-class check runs outside the guard so it can never throw;
+     * the construction itself is guarded — if it ever fails, the guard
+     * disables the swap for the session and the vanilla menu stays.
+     * GuiOpenEvent.gui is a plain public field in this Forge build
+     * (javap-verified; there are no get/set methods). Our own screen is
+     * a different class, so the replacement can never loop.
+     */
+    @SubscribeEvent
+    public void onGuiOpen(GuiOpenEvent event) {
+        if (event.gui == null || event.gui.getClass() != GuiMainMenu.class) return;
+        guard("main_menu", () -> event.gui = new NoobMainMenu());
     }
 
     // ---------------------------------------------------------------

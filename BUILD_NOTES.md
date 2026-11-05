@@ -23,14 +23,15 @@ noob-launchar/
     CONFIG_SCHEMA.md        config JSON schema shared by all versions
   versions/
     1.8.9-forge/            Minecraft 1.8.9 + Forge 11.15.1.2318, Java 8, MCP mappings
-      Noob_mod_antor-1.1.2.jar    <- current distribution jar (SRG names)
+      Noob_mod_antor-1.2.0.jar    <- current distribution jar (SRG names)
+      Noob_mod_antor-1.1.2.jar    <- previous release, kept in place
       Noob_mod_antor-1.1.1.jar    <- previous release, kept in place
       Noob_mod_antor-1.1.0.jar    <- previous release, kept in place
       Noob_launchar-1.0.0.jar     <- first release, kept in place
       build.sh                    reproducible manual pipeline (see below)
       generate_pack.py            generates the built-in FPS pack textures
       build.gradle, gradlew, ...  official MDK files (see "ForgeGradle" below)
-      src/main/java/noobmodantor/ mod sources (56 files)
+      src/main/java/noobmodantor/ mod sources (58 files)
       src/main/resources/mcmod.info
       src/main/resources/assets/noob_mod_antor/fpspack/  bundled FPS pack
       manual/                     toolchain: libs/, tools/, mappings/, work/
@@ -47,7 +48,8 @@ Toolchain installed in the workspace: Temurin JDK 8 at `~/workspace/jdk8`
 
 | Version | Status | Jar | Size |
 |---------|--------|-----|------|
-| **1.8.9 Forge** | ✅ **Built** (manual pipeline; compiles clean, reobf verified) — **1.1.2**, Tooltip Scroll module on top of 1.1.1 (39 modules + Performance page + Appearance page + built-in FPS pack) | `versions/1.8.9-forge/Noob_mod_antor-1.1.2.jar` | 160,124 bytes |
+| **1.8.9 Forge** | ✅ **Built** (manual pipeline; compiles clean, reobf verified) — **1.2.0**, branded custom main menu on top of 1.1.2 (39 modules + Performance page + Appearance page + built-in FPS pack) | `versions/1.8.9-forge/Noob_mod_antor-1.2.0.jar` | 165,357 bytes |
+| 1.8.9 Forge (previous) | ✅ Built — 1.1.2, Tooltip Scroll module on top of 1.1.1 (39 modules + Performance page + Appearance page + built-in FPS pack) | `versions/1.8.9-forge/Noob_mod_antor-1.1.2.jar` | 160,124 bytes |
 | 1.8.9 Forge (previous) | ✅ Built — 1.1.1, menu scrollbar fix on top of 1.1.0 (38 modules + Performance page + Appearance page + built-in FPS pack) | `versions/1.8.9-forge/Noob_mod_antor-1.1.1.jar` | 155,666 bytes |
 | 1.8.9 Forge (earlier) | ✅ Built — 1.1.0, 38 modules + Performance page + Appearance page + built-in FPS pack | `versions/1.8.9-forge/Noob_mod_antor-1.1.0.jar` | 154,593 bytes |
 | 1.8.9 Forge (first) | ✅ Built (as Noob_launchar, 11 modules) | `versions/1.8.9-forge/Noob_launchar-1.0.0.jar` | 47,942 bytes |
@@ -55,6 +57,86 @@ Toolchain installed in the workspace: Temurin JDK 8 at `~/workspace/jdk8`
 
 Adding a future version = create `versions/<mc>-<loader>/`, reuse the
 `shared/` spec, mirror the module classes, add a `build.sh`.
+
+---
+
+## 1.2.0 — branded main menu (2026-11-05)
+
+The home page is ours now: with the mod installed, the vanilla main
+menu is replaced by a branded Noob_mod_antor screen
+(`gui/NoobMainMenu.java` + `gui/NoobButton.java`; version bumped to
+1.2.0 in `NoobModAntor.VERSION`, `mcmod.info` and the `build.sh` jar
+name; older jars kept in place untouched). Module count is unchanged
+(39) — the menu is a screen, not a module — and no module's behavior
+changed in this release.
+
+**Hook (all verified against this exact Forge build, none assumed):**
+
+- `GuiOpenEvent` has **no get/set methods** here — just the public
+  field `gui` (javap on the MCP jar). The Forge patch to
+  `Minecraft.displayGuiScreen` (userdev `patches.zip`) substitutes
+  null → `new GuiMainMenu()` *before* posting the event, then assigns
+  `event.gui` back afterwards — so writing the field is the whole
+  mechanism, and closing a screen to "null" with no world loaded
+  lands on our menu too.
+- `ClientEvents.onGuiOpen` replaces the incoming screen only when
+  `event.gui.getClass() == GuiMainMenu.class` (exact class, so other
+  mods' menu subclasses are untouched). The cheap check runs outside
+  the crash-guard; the `new NoobMainMenu()` construction runs inside
+  it (guard id `main_menu`) — if construction ever threw, the guard
+  would disable the swap for the session and the vanilla menu would
+  stay. Our own screen is a different class, so the swap cannot loop.
+- Screen targets javap-verified: `GuiSelectWorld(GuiScreen)`,
+  `GuiMultiplayer(GuiScreen)`, `GuiOptions(GuiScreen, GameSettings)`,
+  `GuiConnecting(GuiScreen, Minecraft, ServerData)`,
+  `ServerData(String, String, boolean)`, `Minecraft.getSession()` →
+  `Session.getUsername()`, `Minecraft.shutdown()`.
+
+**The screen** extends `GuiScreen` (not GuiMainMenu), so none of the
+panorama/dirt machinery exists. Everything is laid out from
+width/height in `initGui` (resize-safe, phone GUI scales included):
+
+- **Backdrop:** vertical gradient — dark top, bottom color slowly
+  drifting toward the live accent (`Ui.accent()`, so it follows the
+  Appearance choice and chroma) over a ~63 s sine — plus 40 floating
+  dots (fraction-based positions/speeds, rising, twinkling) and dark
+  gradient vignette bands at the top/bottom edges. Plain rects and
+  alphas only: no panorama, no textures, no shaders.
+- **Branding:** `NOOB_MOD_ANTOR` centered at up to 3× font scale
+  (scale capped to fit the screen width) in the accent color,
+  tagline "Antor's PvP Client" under it, and a vanilla-style yellow
+  splash — tilted −20°, pulsing, anchored past the title's right
+  edge — whose line cycles every ~3.5 s: "100% Noob Power!",
+  "Fakepixel Ready!", "FPS Boost ON!", "Made by Antor!",
+  "Also try AgeraPvP!", "Right Shift = Mods!".
+- **Buttons** (`NoobButton`: dark translucent fill, accent border +
+  halo and accent label on hover): Singleplayer → `GuiSelectWorld`,
+  Multiplayer → `GuiMultiplayer`, then a **quick-join row of three
+  small buttons** — **Fakepixel** (`mc.fakepixel.me`), **AgeraPvP**
+  (`agerapvp.club`), **AyorMC** (`mc.ayormc.net`) — each connecting
+  via `new GuiConnecting(this, mc, new ServerData(name, ip, false))`;
+  a half-width row with **Noob Mod Menu** (opens the existing
+  Right Shift module menu directly) and **Options** (`GuiOptions`);
+  and **Quit Game** → `mc.shutdown()`. Sub-screens get our menu as
+  their parent, so Back returns here.
+- **Footer bar:** left "Noob_mod_antor v1.2.0 • 39 modules" (version
+  read from `NoobModAntor.VERSION`), right "Player: <session
+  username>" (null-guarded; the footer can never break the menu).
+
+**Deliberately left out:** the **Realms** button (Realms needs the
+premium-account Realms flow) and vanilla's small **language** button
+(language is inside Options). Both noted here rather than silently
+dropped.
+
+Verified: clean `build.sh` run (zero compile errors),
+`Noob_mod_antor-1.2.0.jar` = 165,357 bytes, bundled `mcmod.info`
+reports version 1.2.0, and javap on the reobfuscated jar confirms
+`GuiOpenEvent.gui` access + the `GuiMainMenu` exact-class check in
+`ClientEvents` and all five screen constructions with correct
+signatures in `NoobMainMenu`. Live-test: launch the game — the
+branded menu appears instead of the vanilla one; every button works;
+disconnecting from a server returns to it; resizing keeps the layout
+centered.
 
 ---
 

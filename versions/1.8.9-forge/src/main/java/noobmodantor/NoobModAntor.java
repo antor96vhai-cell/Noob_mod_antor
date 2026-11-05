@@ -24,7 +24,7 @@ import org.lwjgl.input.Keyboard;
         clientSideOnly = true, acceptedMinecraftVersions = "[1.8.9]")
 public class NoobModAntor {
     public static final String MODID = "noob_mod_antor";
-    public static final String VERSION = "1.1.2";
+    public static final String VERSION = "1.2.0";
 
     public static final org.apache.logging.log4j.Logger LOGGER =
             org.apache.logging.log4j.LogManager.getLogger("Noob_mod_antor");

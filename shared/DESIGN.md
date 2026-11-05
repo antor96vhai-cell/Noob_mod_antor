@@ -23,7 +23,16 @@ copied — only the generic feature ideas: module list, toggles, HUD editor).
 
 ## Layout
 
-- **Main menu:** centered panel, 320px wide, 16px from top/bottom of the
+- **Branded main menu (game home page, since 1.2.0):** replaces the
+  vanilla title screen. Same palette: dark vertical gradient backdrop
+  (bottom edge slowly drifting toward the live accent) with floating
+  accent dots and edge vignettes; big accent title "NOOB_MOD_ANTOR"
+  (up to 3× font scale, capped to fit width) + dim tagline + rotating
+  yellow splash; dark translucent buttons with accent border/halo on
+  hover — Singleplayer, Multiplayer, a three-button quick-join row,
+  Noob Mod Menu / Options, Quit; footer bar with version + module
+  count (left) and player name (right). No Realms, no language button.
+- **Module menu (Right Shift):** centered panel, 320px wide, 16px from top/bottom of the
   screen. Header: accent title "Noob_mod_antor", dim subtitle, 1px accent
   rule. Module rows 24px high: name left, ">" settings affordance, ON/OFF
   pill (30×14, right). List scrolls (mouse wheel) inside a scissored/clipped
