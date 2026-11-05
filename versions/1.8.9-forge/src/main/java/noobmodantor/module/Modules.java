@@ -56,6 +56,7 @@ public final class Modules {
         register(new BehindYouModule());
         register(new SoundTweaksModule());
         register(new SmartCullingModule());
+        register(new TooltipScrollModule());
         applyDefaults();
     }
 

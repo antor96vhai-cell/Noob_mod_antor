@@ -4,11 +4,14 @@ import net.minecraft.client.Minecraft;
 import net.minecraftforge.client.event.ClientChatReceivedEvent;
 import net.minecraftforge.client.event.EntityViewRenderEvent;
 import net.minecraftforge.client.event.FOVUpdateEvent;
+import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderHandEvent;
 import net.minecraftforge.client.event.RenderLivingEvent;
 import net.minecraftforge.client.event.RenderWorldLastEvent;
 import net.minecraftforge.client.event.sound.PlaySoundEvent;
+import net.minecraftforge.event.entity.player.ItemTooltipEvent;
+import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import noobmodantor.NoobConfig;
@@ -36,6 +39,7 @@ import noobmodantor.module.ScoreboardModule;
 import noobmodantor.module.SmartCullingModule;
 import noobmodantor.module.SoundTweaksModule;
 import noobmodantor.module.TimeChangerModule;
+import noobmodantor.module.TooltipScrollModule;
 import noobmodantor.module.ToggleSneakModule;
 import noobmodantor.module.ToggleSprintModule;
 import noobmodantor.module.WeatherModule;
@@ -159,6 +163,26 @@ public class ClientEvents {
             final int[] pos = module.pos(mc);
             guard(module.id, () -> module.render(mc, pos[0], pos[1]));
         }
+    }
+
+    // ---------------------------------------------------------------
+    // Tooltip Scroll (capture during the screen draw, draw in Post)
+    // ---------------------------------------------------------------
+
+    @SubscribeEvent
+    public void onDrawScreenPre(GuiScreenEvent.DrawScreenEvent.Pre event) {
+        TooltipScrollModule.frameStart();
+    }
+
+    /** LOW priority: capture the tooltip lines after other mods have had their say, since capturing an overflowing tooltip also empties the event list. */
+    @SubscribeEvent(priority = EventPriority.LOW)
+    public void onItemTooltip(ItemTooltipEvent event) {
+        guard("tooltip_scroll", () -> TooltipScrollModule.onTooltip(event));
+    }
+
+    @SubscribeEvent
+    public void onDrawScreenPost(GuiScreenEvent.DrawScreenEvent.Post event) {
+        guard("tooltip_scroll", () -> TooltipScrollModule.onDrawPost(event));
     }
 
     @SubscribeEvent

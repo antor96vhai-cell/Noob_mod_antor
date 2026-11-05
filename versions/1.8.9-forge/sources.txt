@@ -51,5 +51,6 @@ src/main/java/noobmodantor/module/TextModule.java
 src/main/java/noobmodantor/module/TimeChangerModule.java
 src/main/java/noobmodantor/module/ToggleSneakModule.java
 src/main/java/noobmodantor/module/ToggleSprintModule.java
+src/main/java/noobmodantor/module/TooltipScrollModule.java
 src/main/java/noobmodantor/module/WeatherModule.java
 src/main/java/noobmodantor/module/ZoomModule.java

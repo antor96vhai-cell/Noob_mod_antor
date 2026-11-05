@@ -12,8 +12,10 @@ Performance page and the built-in resource pack were added in the
 **1.8.9 Forge build, version 1.1.0**; modules 25–32 plus the
 appearance system in a second 1.1.0 expansion round; and modules
 33–38 in a third round matching Polyfrost's 1.8.9 catalog (see the
-mapping section below). All are the spec target for future ports of
-the other versions (the 26.2 Fabric build still ships 1–11).
+mapping section below); and module 39 in **1.1.2**, after live play
+showed long Auction House tooltips overflowing a phone screen.
+All are the spec target for future ports of the other versions
+(the 26.2 Fabric build still ships 1–11).
 
 | # | Module id | Display name | Default | HUD | Notes |
 |---|-----------|--------------|---------|-----|-------|
@@ -55,6 +57,7 @@ the other versions (the 26.2 Fabric build still ships 1–11).
 | 36 | `behind_you` | Behind You | on | no | Hold the Behind You key (default F8) in third person: camera snaps 180° behind; release restores. Pure camera override — facing never changes. |
 | 37 | `sound_tweaks` | Sound Tweaks | **off** | no | Volume sliders (0–200%) for UI click, level-up, explosion and player-hurt sounds, matched by name substring on Forge's PlaySoundEvent and replaced at the scaled volume. |
 | 38 | `smart_culling` | Smart Culling | on | no | Entity distance slider (0 = unlimited, default 64) and tile-entity distance slider (default 48): living entities and the special renderers of common block entities (chests, signs, banners, beacons, spawners, ...) are skipped beyond those distances. Chunk/block culling is vanilla's job and is NOT replaced (see BUILD_NOTES.md). |
+| 39 | `tooltip_scroll` | Tooltip Scroll | on | no | (Since 1.1.2) Item tooltips taller than the screen — whose top vanilla/Forge pushes off-screen — are captured via ItemTooltipEvent and redrawn pinned fully on-screen with a scroll offset: mouse wheel (3 lines/notch) or, on touch, dragging inside the tooltip box. Vanilla tooltips that fit are never touched. Fixes Auction House lore being cut off at the top. |
 
 ## Performance page (1.8.9, since 1.1.0)
 
@@ -127,9 +130,14 @@ The user's reference set is Polyfrost's 1.8.9 catalog. Equivalence:
   (Performance page), menu search (SmartSearch-lite), and a
   crash-guard around every module entry point (CrashPatch spirit —
   infrastructure, not a module).
+- **Added later (1.1.2):** Tooltip Scroll — it sat in the skipped
+  list below during round 3, then landed via the ItemTooltipEvent
+  capture + DrawScreenEvent.Post redraw route after live play
+  showed long Auction House tooltips overflowing a phone screen
+  (see BUILD_NOTES.md).
 - **Attempted, skipped with documented reasons (BUILD_NOTES.md):**
   Old Animations, Damage Tint, Color Saturation, Motion Blur
-  (PolyBlur), Glint Colorizer, GUI Blur, Tooltip Scroll, 3D Skin
+  (PolyBlur), Glint Colorizer, GUI Blur, 3D Skin
   Layers.
 - **Intentionally excluded:** Poly+ (world hosting/friends service),
   OneClient modpacks (whole-client products), Hytils Reborn

@@ -7,7 +7,7 @@
 
 **Noob_mod_antor** is an original, lightweight in-game HUD/menu client
 mod — module menu (Right Shift), per-module settings, draggable HUD
-editor, and 38 modules (see `shared/MODULES.md`). It is a pure client-side
+editor, and 39 modules (see `shared/MODULES.md`). It is a pure client-side
 HUD/menu mod: **no authentication, login, or ownership code exists in any
 version.** Design language: `shared/DESIGN.md`. Config format (one schema
 for all versions): `shared/CONFIG_SCHEMA.md`.
@@ -23,13 +23,14 @@ noob-launchar/
     CONFIG_SCHEMA.md        config JSON schema shared by all versions
   versions/
     1.8.9-forge/            Minecraft 1.8.9 + Forge 11.15.1.2318, Java 8, MCP mappings
-      Noob_mod_antor-1.1.1.jar    <- current distribution jar (SRG names)
+      Noob_mod_antor-1.1.2.jar    <- current distribution jar (SRG names)
+      Noob_mod_antor-1.1.1.jar    <- previous release, kept in place
       Noob_mod_antor-1.1.0.jar    <- previous release, kept in place
       Noob_launchar-1.0.0.jar     <- first release, kept in place
       build.sh                    reproducible manual pipeline (see below)
       generate_pack.py            generates the built-in FPS pack textures
       build.gradle, gradlew, ...  official MDK files (see "ForgeGradle" below)
-      src/main/java/noobmodantor/ mod sources (55 files)
+      src/main/java/noobmodantor/ mod sources (56 files)
       src/main/resources/mcmod.info
       src/main/resources/assets/noob_mod_antor/fpspack/  bundled FPS pack
       manual/                     toolchain: libs/, tools/, mappings/, work/
@@ -46,13 +47,94 @@ Toolchain installed in the workspace: Temurin JDK 8 at `~/workspace/jdk8`
 
 | Version | Status | Jar | Size |
 |---------|--------|-----|------|
-| **1.8.9 Forge** | ✅ **Built** (manual pipeline; compiles clean, reobf verified) — **1.1.1**, menu scrollbar fix on top of 1.1.0 (renamed Noob_mod_antor, 38 modules + Performance page + Appearance page + built-in FPS pack) | `versions/1.8.9-forge/Noob_mod_antor-1.1.1.jar` | 155,666 bytes |
-| 1.8.9 Forge (previous) | ✅ Built — 1.1.0, 38 modules + Performance page + Appearance page + built-in FPS pack | `versions/1.8.9-forge/Noob_mod_antor-1.1.0.jar` | 154,593 bytes |
+| **1.8.9 Forge** | ✅ **Built** (manual pipeline; compiles clean, reobf verified) — **1.1.2**, Tooltip Scroll module on top of 1.1.1 (39 modules + Performance page + Appearance page + built-in FPS pack) | `versions/1.8.9-forge/Noob_mod_antor-1.1.2.jar` | 160,124 bytes |
+| 1.8.9 Forge (previous) | ✅ Built — 1.1.1, menu scrollbar fix on top of 1.1.0 (38 modules + Performance page + Appearance page + built-in FPS pack) | `versions/1.8.9-forge/Noob_mod_antor-1.1.1.jar` | 155,666 bytes |
+| 1.8.9 Forge (earlier) | ✅ Built — 1.1.0, 38 modules + Performance page + Appearance page + built-in FPS pack | `versions/1.8.9-forge/Noob_mod_antor-1.1.0.jar` | 154,593 bytes |
 | 1.8.9 Forge (first) | ✅ Built (as Noob_launchar, 11 modules) | `versions/1.8.9-forge/Noob_launchar-1.0.0.jar` | 47,942 bytes |
 | **26.2 Fabric** | ✅ Built earlier; display name renamed to Noob_launchar and rebuilt this run | `versions/26.2-fabric/Noob_launchar-1.0.0_mc26.2.jar` | 45,243 bytes |
 
 Adding a future version = create `versions/<mc>-<loader>/`, reuse the
 `shared/` spec, mirror the module classes, add a `build.sh`.
+
+---
+
+## 1.1.2 — Tooltip Scroll (2026-11-05)
+
+New module **39: Tooltip Scroll** (`tooltip_scroll`, default on,
+`module/TooltipScrollModule.java`; version bumped to 1.1.2 in
+`NoobModAntor.VERSION`, `mcmod.info` and the `build.sh` jar name;
+the 1.1.1 jar is kept in place untouched).
+
+**User report (live play, on his phone):** long Auction House item
+tooltips (Fakepixel SkyBlock) are taller than the screen — the top
+of the lore is cut off and there is no way to read it. This is
+Forge's own tooltip placement: at runtime the tooltip is drawn by
+`GuiUtils.drawHoveringText` (the Forge patch replaces
+`GuiScreen.drawHoveringText` with a call to it), which clamps the
+box's bottom edge to the screen and thereby pushes the top of a
+tall tooltip off-screen.
+
+**Why the round-3 skip no longer applies.** Round 3 skipped this
+because "ItemTooltipEvent only edits text lines". Verification of
+this exact Forge build (userdev `patches.zip` + javap on the MCP
+jar, not assumptions) showed the event route is complete after all:
+
+- The ItemStack patch appends
+  `ForgeEventFactory.onItemTooltip(this, player, list, advanced)`
+  at the end of `getTooltip` and returns that same list — so
+  `ItemTooltipEvent` (public final `itemStack` / `toolTip` fields,
+  javap-verified) really is posted on the client GUI path:
+  `GuiContainer.renderToolTip` calls `getTooltip` every frame for
+  the hovered stack, and the event's list is the exact list vanilla
+  then decorates and draws.
+- `DrawScreenEvent.Pre/Post` are posted by
+  `ForgeHooksClient.drawScreen`, which the EntityRenderer patch
+  calls *instead of* `GuiScreen.drawScreen`: Pre → the **entire**
+  screen draw (slots, items, and the tooltip at the very end of
+  `GuiContainer.drawScreen`, bytecode-verified order) → Post. The
+  event carries public final `mouseX`/`mouseY` fields. So in Post,
+  vanilla has fully drawn — the correct place to draw a replacement.
+
+**How it works.** A frame counter increments on DrawScreenEvent.Pre.
+On ItemTooltipEvent (LOW priority, so other mods' tooltip edits land
+first) inside a `GuiContainer`, the module measures the tooltip
+with vanilla's own box math (`8 + (n>1 ? 2+(n-1)*10 : 0)`, x =
+mouse+12 with the right-edge flip). If vanilla's bottom-clamped
+placement would push the box top off-screen, the module copies the
+lines, stamps them with the frame counter, and **empties the event
+list** so vanilla draws nothing. (Emptying was chosen over the
+paint-a-cover-rect alternative: a cover would have to reproduce
+GuiUtils' internal geometry exactly — it differs in small ways from
+textbook vanilla — while an emptied list is exact by construction.)
+In DrawScreenEvent.Post, if the capture is fresh (same frame, same
+screen), the module draws its own replica of the tooltip: the
+GuiUtils background/border gradient recipe and colors
+(`GuiUtils.drawGradientRect`, zLevel 300), box pinned fully
+on-screen at vanilla's x, text drawn with `drawStringWithShadow`
+under a GL scissor clipped to the box interior and shifted by the
+scroll offset, plus small GL-triangle up/down arrows when more
+content exists above/below. Tooltips that fit are never touched.
+
+**Scrolling.** Mouse wheel (polled once per frame in Post): 3 lines
+per notch, clamped to `[0, totalHeight - visibleHeight]`. Touch —
+the user plays in Zalith on Android, where there is no wheel: while
+mouse button 0 is held with the pointer inside our box, vertical
+drag deltas (`Mouse.getDY()`, sign-checked against GUI coords:
+pointer up ⇒ content up ⇒ offset grows) scroll; the press-start
+frame discards the stale accumulated delta so the content does not
+jump. Drags outside the box do nothing, so inventory dragging is
+untouched. The offset resets to 0 whenever the hovered stack
+(reference compare) or the screen changes. All entry points run
+through the ClientEvents crash-guard, like every module.
+
+Verified: clean `build.sh` run (zero compile errors),
+`Noob_mod_antor-1.1.2.jar` = 160,124 bytes, bundled `mcmod.info`
+reports version 1.1.2, javap on the reobfuscated jar shows
+`TooltipScrollModule` referencing `ItemTooltipEvent` fields,
+`GuiUtils.drawGradientRect` and the `GuiContainer` gate under SRG
+names. Live-test: hover a long-lore AH item — the tooltip stays
+fully on-screen; wheel (PC) or drag on the tooltip (phone) scrolls
+the lore; short tooltips look exactly like vanilla.
 
 ---
 
@@ -551,6 +633,11 @@ distance, the Performance presets, and OptiFine.
 - **Tooltip Scroll** — scrolling long tooltips requires hooking
   tooltip *rendering and mouse handling inside every screen*;
   1.8.9's ItemTooltipEvent only edits text lines. Skipped.
+  **Superseded in 1.1.2** (see the 1.1.2 section at the top of this
+  file): the event *is* posted on the GUI path (Forge patches
+  `getTooltip` to post it) and `DrawScreenEvent` wraps the whole
+  screen draw, so capturing there and drawing a scrollable replica
+  in Post works — Tooltip Scroll shipped as module 39.
 - **3D Skin Layers** — solid 3D skin layers require replacing the
   player model's layer geometry/renderers (a model rewrite that
   fights other mods and OptiFine's renderer). Skipped.
